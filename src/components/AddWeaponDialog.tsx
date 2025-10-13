@@ -13,12 +13,20 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const weaponSchema = z.object({
   serial_number: z.string().min(3, "Número de série deve ter no mínimo 3 caracteres"),
   model: z.string().min(2, "Modelo deve ter no mínimo 2 caracteres"),
   caliber: z.string().min(2, "Calibre inválido"),
   manufacturer: z.string().min(2, "Fabricante inválido"),
+  type: z.enum(["pistol", "shotgun", "rifle"], { errorMap: () => ({ message: "Selecione um tipo válido" }) }),
 });
 
 type AddWeaponDialogProps = {
@@ -33,6 +41,7 @@ export const AddWeaponDialog = ({ open, onOpenChange }: AddWeaponDialogProps) =>
     model: "",
     caliber: "",
     manufacturer: "",
+    type: "pistol" as "pistol" | "shotgun" | "rifle",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,6 +73,7 @@ export const AddWeaponDialog = ({ open, onOpenChange }: AddWeaponDialogProps) =>
         model: "",
         caliber: "",
         manufacturer: "",
+        type: "pistol",
       });
       onOpenChange(false);
     } catch (error: any) {
@@ -124,6 +134,19 @@ export const AddWeaponDialog = ({ open, onOpenChange }: AddWeaponDialogProps) =>
               placeholder="Ex: Taurus"
               required
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="type">Tipo *</Label>
+            <Select value={formData.type} onValueChange={(value: "pistol" | "shotgun" | "rifle") => setFormData({ ...formData, type: value })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pistol">Pistola</SelectItem>
+                <SelectItem value="shotgun">Escopeta</SelectItem>
+                <SelectItem value="rifle">Fuzil</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">

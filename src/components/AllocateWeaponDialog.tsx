@@ -29,6 +29,7 @@ type Weapon = {
   id: string;
   serial_number: string;
   model: string;
+  type: string;
 };
 
 type Profile = {
@@ -55,7 +56,7 @@ export const AllocateWeaponDialog = ({ open, onOpenChange }: AllocateWeaponDialo
   const fetchAvailableWeapons = async () => {
     const { data, error } = await supabase
       .from("weapons")
-      .select("id, serial_number, model")
+      .select("id, serial_number, model, type")
       .eq("status", "available")
       .order("serial_number");
 
@@ -94,6 +95,73 @@ export const AllocateWeaponDialog = ({ open, onOpenChange }: AllocateWeaponDialo
     setLoading(true);
 
     try {
+      // Verificar se usuário já tem alocações ativas
+      const { data: existingAllocations, error: checkError } = await supabase
+        .from("allocations")
+        .select("id, weapons(type)")
+        .eq("user_id", userId)
+        .eq("status", "active");
+
+      if (checkError) throw checkError;
+
+      if (existingAllocations && existingAllocations.length > 0) {
+        toast({
+          title: "Usuário já possui alocação ativa",
+          description: "Este funcionário já tem armas alocadas. Devolva antes de alocar novas.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Obter tipo da arma selecionada
+      const selectedWeapon = weapons.find(w => w.id === weaponId);
+      if (!selectedWeapon) {
+        toast({
+          title: "Erro",
+          description: "Arma não encontrada.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Validar regras de alocação
+      const allocatedTypes = existingAllocations?.map((a: any) => a.weapons.type) || [];
+      const hasPistol = allocatedTypes.includes("pistol");
+      const hasShotgun = allocatedTypes.includes("shotgun");
+      const hasRifle = allocatedTypes.includes("rifle");
+
+      if (selectedWeapon.type === "pistol" && hasPistol) {
+        toast({
+          title: "Limite atingido",
+          description: "Usuário já possui uma pistola alocada.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (selectedWeapon.type === "shotgun" && (hasShotgun || hasRifle)) {
+        toast({
+          title: "Combinação inválida",
+          description: "Usuário já possui escopeta ou fuzil. Só é permitido 1 pistola + 1 escopeta OU 1 pistola + 1 fuzil.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (selectedWeapon.type === "rifle" && (hasRifle || hasShotgun)) {
+        toast({
+          title: "Combinação inválida",
+          description: "Usuário já possui fuzil ou escopeta. Só é permitido 1 pistola + 1 fuzil OU 1 pistola + 1 escopeta.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.from("allocations").insert([
         {
           weapon_id: weaponId,
@@ -147,7 +215,7 @@ export const AllocateWeaponDialog = ({ open, onOpenChange }: AllocateWeaponDialo
                 ) : (
                   weapons.map((weapon) => (
                     <SelectItem key={weapon.id} value={weapon.id}>
-                      {weapon.serial_number} - {weapon.model}
+                      {weapon.serial_number} - {weapon.model} ({weapon.type === 'pistol' ? 'Pistola' : weapon.type === 'shotgun' ? 'Escopeta' : 'Fuzil'})
                     </SelectItem>
                   ))
                 )}

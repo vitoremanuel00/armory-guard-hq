@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { History, CheckCircle, AlertCircle } from "lucide-react";
+import { History, CheckCircle, AlertCircle, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, differenceInHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 type Allocation = {
@@ -73,7 +73,25 @@ export const AllocationsTable = () => {
     setLoading(false);
   };
 
-  const handleReturn = async (id: string) => {
+  const handleReturn = async (id: string, userId: string) => {
+    // Verificar se usuário realmente tem essa alocação ativa
+    const { data: allocation, error: checkError } = await supabase
+      .from("allocations")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .single();
+
+    if (checkError || !allocation) {
+      toast({
+        title: "Erro de validação",
+        description: "Esta alocação não existe ou já foi devolvida.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { error } = await supabase
       .from("allocations")
       .update({ status: "returned", returned_at: new Date().toISOString() })
@@ -91,6 +109,11 @@ export const AllocationsTable = () => {
         description: "A arma foi devolvida com sucesso.",
       });
     }
+  };
+
+  const isOverdue = (allocatedAt: string) => {
+    const hours = differenceInHours(new Date(), new Date(allocatedAt));
+    return hours >= 24;
   };
 
   if (loading) {
@@ -150,50 +173,61 @@ export const AllocationsTable = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {allocations.map((allocation) => (
-                <TableRow key={allocation.id}>
-                  <TableCell className="font-medium">
-                    <div>
-                      <p className="font-semibold">{allocation.weapons.serial_number}</p>
-                      <p className="text-sm text-muted-foreground">{allocation.weapons.model}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{allocation.profiles.full_name}</p>
-                      <p className="text-sm text-muted-foreground">{allocation.profiles.email}</p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(allocation.allocated_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                  </TableCell>
-                  <TableCell>
-                    {allocation.returned_at
-                      ? format(new Date(allocation.returned_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    {allocation.status === "active" ? (
-                      <Badge className="bg-accent text-accent-foreground">Ativa</Badge>
-                    ) : (
-                      <Badge className="bg-success text-success-foreground">Devolvida</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {allocation.status === "active" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleReturn(allocation.id)}
-                        className="gap-2"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Devolver
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {allocations.map((allocation) => {
+                const overdue = allocation.status === "active" && isOverdue(allocation.allocated_at);
+                return (
+                  <TableRow key={allocation.id} className={overdue ? "bg-destructive/5" : ""}>
+                    <TableCell className="font-medium">
+                      <div>
+                        <p className="font-semibold">{allocation.weapons.serial_number}</p>
+                        <p className="text-sm text-muted-foreground">{allocation.weapons.model}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{allocation.profiles.full_name}</p>
+                        <p className="text-sm text-muted-foreground">{allocation.profiles.email}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {format(new Date(allocation.allocated_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        {overdue && (
+                          <Badge variant="destructive" className="gap-1">
+                            <Clock className="w-3 h-3" />
+                            +24h
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {allocation.returned_at
+                        ? format(new Date(allocation.returned_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
+                        : "-"}
+                    </TableCell>
+                    <TableCell>
+                      {allocation.status === "active" ? (
+                        <Badge className="bg-accent text-accent-foreground">Ativa</Badge>
+                      ) : (
+                        <Badge className="bg-success text-success-foreground">Devolvida</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {allocation.status === "active" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleReturn(allocation.id, allocation.user_id)}
+                          className="gap-2"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          Devolver
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>

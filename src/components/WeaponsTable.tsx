@@ -12,6 +12,7 @@ type Weapon = {
   caliber: string;
   manufacturer: string;
   status: string;
+  type: string;
 };
 
 export const WeaponsTable = () => {
@@ -54,6 +55,19 @@ export const WeaponsTable = () => {
       setWeapons(data || []);
     }
     setLoading(false);
+  };
+
+  const getTypeBadge = (type: string) => {
+    switch (type) {
+      case "pistol":
+        return <Badge variant="secondary">Pistola</Badge>;
+      case "shotgun":
+        return <Badge variant="outline">Escopeta</Badge>;
+      case "rifle":
+        return <Badge variant="outline">Fuzil</Badge>;
+      default:
+        return <Badge variant="secondary">{type}</Badge>;
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -120,6 +134,7 @@ export const WeaponsTable = () => {
               <TableRow className="bg-muted/50">
                 <TableHead>Número de Série</TableHead>
                 <TableHead>Modelo</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Calibre</TableHead>
                 <TableHead>Fabricante</TableHead>
                 <TableHead>Status</TableHead>
@@ -130,6 +145,7 @@ export const WeaponsTable = () => {
                 <TableRow key={weapon.id}>
                   <TableCell className="font-medium">{weapon.serial_number}</TableCell>
                   <TableCell>{weapon.model}</TableCell>
+                  <TableCell>{getTypeBadge(weapon.type)}</TableCell>
                   <TableCell>{weapon.caliber}</TableCell>
                   <TableCell>{weapon.manufacturer}</TableCell>
                   <TableCell>{getStatusBadge(weapon.status)}</TableCell>
