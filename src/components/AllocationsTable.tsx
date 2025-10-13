@@ -185,8 +185,8 @@ export const AllocationsTable = () => {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{allocation.profiles.full_name}</p>
-                        <p className="text-sm text-muted-foreground">{allocation.profiles.email}</p>
+                        <p className="font-medium">{allocation.profiles?.full_name || "Usuário não encontrado"}</p>
+                        <p className="text-sm text-muted-foreground">{allocation.profiles?.email || "-"}</p>
                       </div>
                     </TableCell>
                     <TableCell>
