@@ -8,6 +8,7 @@ import { WeaponsTable } from "@/components/WeaponsTable";
 import { AllocationsTable } from "@/components/AllocationsTable";
 import { AddWeaponDialog } from "@/components/AddWeaponDialog";
 import { AllocateWeaponDialog } from "@/components/AllocateWeaponDialog";
+import { DashboardStats } from "@/components/DashboardStats";
 import { User, Session } from "@supabase/supabase-js";
 
 const Dashboard = () => {
@@ -17,6 +18,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [addWeaponOpen, setAddWeaponOpen] = useState(false);
   const [allocateWeaponOpen, setAllocateWeaponOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -27,11 +29,21 @@ const Dashboard = () => {
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (!session) {
         navigate("/auth");
+      } else {
+        // Check if user is admin
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+        
+        setIsAdmin(!!roleData);
       }
       setLoading(false);
     });
@@ -86,16 +98,20 @@ const Dashboard = () => {
             <p className="text-muted-foreground mt-1">Gerencie o estoque e alocações de armas</p>
           </div>
           <div className="flex gap-3">
-            <Button onClick={() => setAddWeaponOpen(true)} className="gap-2">
-              <Package className="w-4 h-4" />
-              Nova Arma
-            </Button>
+            {isAdmin && (
+              <Button onClick={() => setAddWeaponOpen(true)} className="gap-2">
+                <Package className="w-4 h-4" />
+                Nova Arma
+              </Button>
+            )}
             <Button onClick={() => setAllocateWeaponOpen(true)} variant="secondary" className="gap-2">
               <Plus className="w-4 h-4" />
               Alocar Arma
             </Button>
           </div>
         </div>
+
+        <DashboardStats />
 
         <div className="grid gap-8">
           <WeaponsTable />

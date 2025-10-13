@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Package, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Eye } from "lucide-react";
+import { WeaponDetailsDialog } from "./WeaponDetailsDialog";
 
 type Weapon = {
   id: string;
@@ -13,11 +17,15 @@ type Weapon = {
   manufacturer: string;
   status: string;
   type: string;
+  photo_url?: string;
 };
 
 export const WeaponsTable = () => {
   const [weapons, setWeapons] = useState<Weapon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedWeapon, setSelectedWeapon] = useState<Weapon | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [filterType, setFilterType] = useState<string>("all");
 
   useEffect(() => {
     fetchWeapons();
@@ -57,62 +65,37 @@ export const WeaponsTable = () => {
     setLoading(false);
   };
 
-  const getTypeBadge = (type: string) => {
-    switch (type) {
-      case "pistol":
-        return <Badge variant="secondary">Pistola</Badge>;
-      case "shotgun":
-        return <Badge variant="outline">Escopeta</Badge>;
-      case "rifle":
-        return <Badge variant="outline">Fuzil</Badge>;
-      default:
-        return <Badge variant="secondary">{type}</Badge>;
-    }
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, { label: string; variant: "default" | "secondary" | "destructive" }> = {
+      available: { label: "Disponível", variant: "default" },
+      allocated: { label: "Alocada", variant: "secondary" },
+      maintenance: { label: "Manutenção", variant: "destructive" },
+    };
+    
+    const variant = variants[status] || variants.available;
+    return <Badge variant={variant.variant}>{variant.label}</Badge>;
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "available":
-        return <Badge className="bg-success text-success-foreground">Disponível</Badge>;
-      case "allocated":
-        return <Badge className="bg-accent text-accent-foreground">Alocada</Badge>;
-      case "maintenance":
-        return <Badge variant="destructive">Manutenção</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
+  const filteredWeapons = filterType === "all" 
+    ? weapons 
+    : weapons.filter(w => w.type === filterType);
+
+  const handleViewDetails = (weapon: Weapon) => {
+    setSelectedWeapon(weapon);
+    setDetailsOpen(true);
   };
 
   if (loading) {
     return (
-      <Card>
+      <Card className="bg-card border-border shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Estoque de Armas
-          </CardTitle>
+          <CardTitle className="text-foreground">Estoque de Armas</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-muted-foreground py-8">Carregando...</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (weapons.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Estoque de Armas
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 space-y-3">
-            <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto" />
-            <p className="text-muted-foreground">Nenhuma arma cadastrada ainda.</p>
-            <p className="text-sm text-muted-foreground">Clique em "Nova Arma" para começar.</p>
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
           </div>
         </CardContent>
       </Card>
@@ -120,41 +103,67 @@ export const WeaponsTable = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Package className="w-5 h-5" />
-          Estoque de Armas ({weapons.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="rounded-md border border-border overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>Número de Série</TableHead>
-                <TableHead>Modelo</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Calibre</TableHead>
-                <TableHead>Fabricante</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {weapons.map((weapon) => (
-                <TableRow key={weapon.id}>
-                  <TableCell className="font-medium">{weapon.serial_number}</TableCell>
-                  <TableCell>{weapon.model}</TableCell>
-                  <TableCell>{getTypeBadge(weapon.type)}</TableCell>
-                  <TableCell>{weapon.caliber}</TableCell>
-                  <TableCell>{weapon.manufacturer}</TableCell>
-                  <TableCell>{getStatusBadge(weapon.status)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      <Card className="bg-card border-border shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-foreground">Estoque de Armas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={filterType} onValueChange={setFilterType} className="w-full">
+            <TabsList className="grid w-full grid-cols-4 mb-4">
+              <TabsTrigger value="all">Todas</TabsTrigger>
+              <TabsTrigger value="pistol">Pistolas</TabsTrigger>
+              <TabsTrigger value="shotgun">Escopetas</TabsTrigger>
+              <TabsTrigger value="rifle">Fuzis</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value={filterType} className="mt-0">
+              {filteredWeapons.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">
+                  Nenhuma arma encontrada
+                </p>
+              ) : (
+                <div className="rounded-md border border-border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead className="text-foreground">Modelo</TableHead>
+                        <TableHead className="text-foreground">Status</TableHead>
+                        <TableHead className="text-foreground w-24">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredWeapons.map((weapon) => (
+                        <TableRow key={weapon.id} className="hover:bg-muted/30">
+                          <TableCell className="font-medium text-foreground">{weapon.model}</TableCell>
+                          <TableCell>{getStatusBadge(weapon.status)}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewDetails(weapon)}
+                              className="gap-2"
+                            >
+                              <Eye className="w-4 h-4" />
+                              Detalhes
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      <WeaponDetailsDialog 
+        weapon={selectedWeapon}
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
+    </>
   );
 };
