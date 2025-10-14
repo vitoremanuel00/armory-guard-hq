@@ -1,8 +1,14 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import pistolImage from "@/assets/pistol-example.jpg";
-import shotgunImage from "@/assets/shotgun-example.jpg";
-import rifleImage from "@/assets/rifle-example.jpg";
+import pistol1 from "@/assets/pistol-1.jpg";
+import pistol2 from "@/assets/pistol-2.jpg";
+import pistol3 from "@/assets/pistol-3.jpg";
+import shotgun1 from "@/assets/shotgun-1.jpg";
+import shotgun2 from "@/assets/shotgun-2.jpg";
+import shotgun3 from "@/assets/shotgun-3.jpg";
+import rifle1 from "@/assets/rifle-1.jpg";
+import rifle2 from "@/assets/rifle-2.jpg";
+import rifle3 from "@/assets/rifle-3.jpg";
 
 type Weapon = {
   id: string;
@@ -21,17 +27,18 @@ interface WeaponDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const getWeaponImage = (type: string) => {
-  switch (type) {
-    case "pistol":
-      return pistolImage;
-    case "shotgun":
-      return shotgunImage;
-    case "rifle":
-      return rifleImage;
-    default:
-      return pistolImage;
-  }
+const getWeaponImage = (type: string, id: string) => {
+  // Use the weapon ID to generate a consistent hash for image selection
+  const hash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const imageIndex = hash % 3; // 0, 1, or 2
+  
+  const imageMap: Record<string, string[]> = {
+    pistol: [pistol1, pistol2, pistol3],
+    shotgun: [shotgun1, shotgun2, shotgun3],
+    rifle: [rifle1, rifle2, rifle3],
+  };
+  
+  return imageMap[type]?.[imageIndex] || pistol1;
 };
 
 const getTypeBadge = (type: string) => {
@@ -69,7 +76,7 @@ export const WeaponDetailsDialog = ({ weapon, open, onOpenChange }: WeaponDetail
         <div className="space-y-6">
           <div className="aspect-video w-full overflow-hidden rounded-lg bg-muted/30 flex items-center justify-center">
             <img 
-              src={weapon.photo_url || getWeaponImage(weapon.type)}
+              src={weapon.photo_url || getWeaponImage(weapon.type, weapon.id)}
               alt={weapon.model}
               className="max-h-full w-auto object-contain"
             />

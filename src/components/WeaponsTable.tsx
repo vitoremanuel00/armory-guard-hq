@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Eye } from "lucide-react";
+import { Eye, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
 import { WeaponDetailsDialog } from "./WeaponDetailsDialog";
 
 type Weapon = {
@@ -20,12 +20,19 @@ type Weapon = {
   photo_url?: string;
 };
 
+type SortField = "model" | "status" | null;
+type SortDirection = "asc" | "desc";
+
 export const WeaponsTable = () => {
   const [weapons, setWeapons] = useState<Weapon[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWeapon, setSelectedWeapon] = useState<Weapon | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [filterType, setFilterType] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const itemsPerPage = 30;
 
   useEffect(() => {
     fetchWeapons();
@@ -76,9 +83,42 @@ export const WeaponsTable = () => {
     return <Badge variant={variant.variant}>{variant.label}</Badge>;
   };
 
-  const filteredWeapons = filterType === "all" 
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+    setCurrentPage(1);
+  };
+
+  let filteredWeapons = filterType === "all" 
     ? weapons 
     : weapons.filter(w => w.type === filterType);
+
+  // Apply sorting
+  if (sortField) {
+    filteredWeapons = [...filteredWeapons].sort((a, b) => {
+      let aValue: string | number = a[sortField];
+      let bValue: string | number = b[sortField];
+      
+      if (sortField === "status") {
+        const statusOrder = { available: 1, allocated: 2, maintenance: 3 };
+        aValue = statusOrder[a.status as keyof typeof statusOrder] || 999;
+        bValue = statusOrder[b.status as keyof typeof statusOrder] || 999;
+      }
+      
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+  }
+
+  // Pagination
+  const totalPages = Math.ceil(filteredWeapons.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedWeapons = filteredWeapons.slice(startIndex, startIndex + itemsPerPage);
 
   const handleViewDetails = (weapon: Weapon) => {
     setSelectedWeapon(weapon);
@@ -123,36 +163,86 @@ export const WeaponsTable = () => {
                   Nenhuma arma encontrada
                 </p>
               ) : (
-                <div className="rounded-md border border-border overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        <TableHead className="text-foreground">Modelo</TableHead>
-                        <TableHead className="text-foreground">Status</TableHead>
-                        <TableHead className="text-foreground w-24">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredWeapons.map((weapon) => (
-                        <TableRow key={weapon.id} className="hover:bg-muted/30">
-                          <TableCell className="font-medium text-foreground">{weapon.model}</TableCell>
-                          <TableCell>{getStatusBadge(weapon.status)}</TableCell>
-                          <TableCell>
+                <>
+                  <div className="rounded-md border border-border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          <TableHead className="text-foreground">
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleViewDetails(weapon)}
-                              className="gap-2"
+                              onClick={() => handleSort("model")}
+                              className="gap-2 font-semibold hover:bg-transparent p-0"
                             >
-                              <Eye className="w-4 h-4" />
-                              Detalhes
+                              Modelo
+                              <ArrowUpDown className="w-4 h-4" />
                             </Button>
-                          </TableCell>
+                          </TableHead>
+                          <TableHead className="text-foreground">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleSort("status")}
+                              className="gap-2 font-semibold hover:bg-transparent p-0"
+                            >
+                              Status
+                              <ArrowUpDown className="w-4 h-4" />
+                            </Button>
+                          </TableHead>
+                          <TableHead className="text-foreground w-24">Ações</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedWeapons.map((weapon) => (
+                          <TableRow key={weapon.id} className="hover:bg-muted/30">
+                            <TableCell className="font-medium text-foreground">{weapon.model}</TableCell>
+                            <TableCell>{getStatusBadge(weapon.status)}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewDetails(weapon)}
+                                className="gap-2"
+                              >
+                                <Eye className="w-4 h-4" />
+                                Detalhes
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4">
+                      <p className="text-sm text-muted-foreground">
+                        Página {currentPage} de {totalPages} ({filteredWeapons.length} armas)
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                          Anterior
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Próxima
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </TabsContent>
           </Tabs>
