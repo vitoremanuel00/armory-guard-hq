@@ -8,7 +8,8 @@ import { WeaponsTable } from "@/components/WeaponsTable";
 import { AllocationsTable } from "@/components/AllocationsTable";
 import { AddWeaponDialog } from "@/components/AddWeaponDialog";
 import { AllocateWeaponDialog } from "@/components/AllocateWeaponDialog";
-import { DashboardStats } from "@/components/DashboardStats";
+import { AdminStats } from "@/components/AdminStats";
+import { UserStats } from "@/components/UserStats";
 import { User, Session } from "@supabase/supabase-js";
 
 const Dashboard = () => {
@@ -97,30 +98,29 @@ const Dashboard = () => {
             <h2 className="text-3xl font-bold text-foreground">Controle de Armamento</h2>
             <p className="text-muted-foreground mt-1">Gerencie o estoque e alocações de armas</p>
           </div>
-          <div className="flex gap-3">
-            {isAdmin && (
-              <Button onClick={() => setAddWeaponOpen(true)} className="gap-2">
-                <Package className="w-4 h-4" />
-                Nova Arma
-              </Button>
-            )}
+          {isAdmin ? (
+            <Button onClick={() => setAddWeaponOpen(true)} className="gap-2">
+              <Package className="w-4 h-4" />
+              Nova Arma
+            </Button>
+          ) : (
             <Button onClick={() => setAllocateWeaponOpen(true)} variant="secondary" className="gap-2">
               <Plus className="w-4 h-4" />
               Alocar Arma
             </Button>
-          </div>
+          )}
         </div>
 
-        <DashboardStats />
+        {isAdmin ? <AdminStats /> : <UserStats />}
 
         <div className="grid gap-8">
-          <WeaponsTable />
+          <WeaponsTable isAdmin={isAdmin} />
           <AllocationsTable />
         </div>
       </main>
 
-      <AddWeaponDialog open={addWeaponOpen} onOpenChange={setAddWeaponOpen} />
-      <AllocateWeaponDialog open={allocateWeaponOpen} onOpenChange={setAllocateWeaponOpen} />
+      {isAdmin && <AddWeaponDialog open={addWeaponOpen} onOpenChange={setAddWeaponOpen} />}
+      {!isAdmin && <AllocateWeaponDialog open={allocateWeaponOpen} onOpenChange={setAllocateWeaponOpen} />}
     </div>
   );
 };

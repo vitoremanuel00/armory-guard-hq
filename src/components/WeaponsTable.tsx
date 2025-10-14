@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Eye, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
+import { Eye, ChevronLeft, ChevronRight, ArrowUpDown, Settings } from "lucide-react";
 import { WeaponDetailsDialog } from "./WeaponDetailsDialog";
+import { EditWeaponDialog } from "./EditWeaponDialog";
 
 type Weapon = {
   id: string;
@@ -23,11 +24,16 @@ type Weapon = {
 type SortField = "model" | "status" | null;
 type SortDirection = "asc" | "desc";
 
-export const WeaponsTable = () => {
+type WeaponsTableProps = {
+  isAdmin?: boolean;
+};
+
+export const WeaponsTable = ({ isAdmin = false }: WeaponsTableProps) => {
   const [weapons, setWeapons] = useState<Weapon[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedWeapon, setSelectedWeapon] = useState<Weapon | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [filterType, setFilterType] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState<SortField>(null);
@@ -125,6 +131,11 @@ export const WeaponsTable = () => {
     setDetailsOpen(true);
   };
 
+  const handleEdit = (weapon: Weapon) => {
+    setSelectedWeapon(weapon);
+    setEditOpen(true);
+  };
+
   if (loading) {
     return (
       <Card className="bg-card border-border shadow-sm">
@@ -199,15 +210,28 @@ export const WeaponsTable = () => {
                             <TableCell className="font-medium text-foreground">{weapon.model}</TableCell>
                             <TableCell>{getStatusBadge(weapon.status)}</TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleViewDetails(weapon)}
-                                className="gap-2"
-                              >
-                                <Eye className="w-4 h-4" />
-                                Detalhes
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleViewDetails(weapon)}
+                                  className="gap-2"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                  Detalhes
+                                </Button>
+                                {isAdmin && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEdit(weapon)}
+                                    className="gap-2"
+                                  >
+                                    <Settings className="w-4 h-4" />
+                                    Editar
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -254,6 +278,14 @@ export const WeaponsTable = () => {
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
       />
+
+      {isAdmin && (
+        <EditWeaponDialog
+          weapon={selectedWeapon as any}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+        />
+      )}
     </>
   );
 };

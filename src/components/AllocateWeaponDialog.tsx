@@ -54,6 +54,26 @@ export const AllocateWeaponDialog = ({ open, onOpenChange }: AllocateWeaponDialo
   }, [open]);
 
   const fetchAvailableWeapons = async () => {
+    // Verificar se o usuário não é admin
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    if (roleData) {
+      toast({
+        title: "Acesso negado",
+        description: "Administradores não podem alocar armas.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { data, error } = await supabase
       .from("weapons")
       .select("id, serial_number, model, type")
@@ -95,6 +115,43 @@ export const AllocateWeaponDialog = ({ open, onOpenChange }: AllocateWeaponDialo
     setLoading(true);
 
     try {
+      // Verificar se o usuário não é admin
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (roleData) {
+        toast({
+          title: "Acesso negado",
+          description: "Administradores não podem alocar armas.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Verificar se a arma não está em manutenção
+      const { data: weaponData } = await supabase
+        .from("weapons")
+        .select("status")
+        .eq("id", weaponId)
+        .single();
+
+      if (weaponData?.status === "maintenance") {
+        toast({
+          title: "Arma em manutenção",
+          description: "Esta arma não pode ser alocada pois está em manutenção.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
       // Verificar se usuário já tem alocações ativas
       const { data: existingAllocations, error: checkError } = await supabase
         .from("allocations")
