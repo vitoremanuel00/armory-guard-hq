@@ -10,6 +10,7 @@ import { AddWeaponDialog } from "@/components/AddWeaponDialog";
 import { AllocateWeaponDialog } from "@/components/AllocateWeaponDialog";
 import { AdminStats } from "@/components/AdminStats";
 import { UserStats } from "@/components/UserStats";
+import { NotificationsPopover } from "@/components/NotificationsPopover";
 import { User, Session } from "@supabase/supabase-js";
 
 const Dashboard = () => {
@@ -85,10 +86,13 @@ const Dashboard = () => {
               <p className="text-sm text-muted-foreground">{user?.email}</p>
             </div>
           </div>
-          <Button onClick={handleLogout} variant="outline" size="sm">
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair
-          </Button>
+          <div className="flex items-center gap-2">
+            {!isAdmin && <NotificationsPopover />}
+            <Button onClick={handleLogout} variant="outline" size="sm">
+              <LogOut className="w-4 h-4 mr-2" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 

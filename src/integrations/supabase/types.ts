@@ -18,6 +18,8 @@ export type Database = {
         Row: {
           allocated_at: string | null
           id: string
+          maintenance_reason: string | null
+          maintenance_required: boolean | null
           notes: string | null
           returned_at: string | null
           status: string
@@ -27,6 +29,8 @@ export type Database = {
         Insert: {
           allocated_at?: string | null
           id?: string
+          maintenance_reason?: string | null
+          maintenance_required?: boolean | null
           notes?: string | null
           returned_at?: string | null
           status?: string
@@ -36,6 +40,8 @@ export type Database = {
         Update: {
           allocated_at?: string | null
           id?: string
+          maintenance_reason?: string | null
+          maintenance_required?: boolean | null
           notes?: string | null
           returned_at?: string | null
           status?: string
@@ -106,6 +112,7 @@ export type Database = {
           caliber: string
           created_at: string | null
           id: string
+          maintenance_at: string | null
           manufacturer: string
           model: string
           photo_url: string | null
@@ -118,6 +125,7 @@ export type Database = {
           caliber: string
           created_at?: string | null
           id?: string
+          maintenance_at?: string | null
           manufacturer: string
           model: string
           photo_url?: string | null
@@ -130,6 +138,7 @@ export type Database = {
           caliber?: string
           created_at?: string | null
           id?: string
+          maintenance_at?: string | null
           manufacturer?: string
           model?: string
           photo_url?: string | null

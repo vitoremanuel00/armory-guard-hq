@@ -5,9 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { History, CheckCircle, AlertCircle, Clock } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
 import { format, differenceInHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ReturnWeaponDialog } from "./ReturnWeaponDialog";
 
 type Allocation = {
   id: string;
@@ -30,6 +30,13 @@ type Allocation = {
 export const AllocationsTable = () => {
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
+  const [selectedAllocation, setSelectedAllocation] = useState<{
+    id: string;
+    userId: string;
+    weaponId: string;
+    weaponModel: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchAllocations();
@@ -73,42 +80,14 @@ export const AllocationsTable = () => {
     setLoading(false);
   };
 
-  const handleReturn = async (id: string, userId: string) => {
-    // Verificar se usuário realmente tem essa alocação ativa
-    const { data: allocation, error: checkError } = await supabase
-      .from("allocations")
-      .select("*")
-      .eq("id", id)
-      .eq("user_id", userId)
-      .eq("status", "active")
-      .single();
-
-    if (checkError || !allocation) {
-      toast({
-        title: "Erro de validação",
-        description: "Esta alocação não existe ou já foi devolvida.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const { error } = await supabase
-      .from("allocations")
-      .update({ status: "returned", returned_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível registrar a devolução.",
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Devolução registrada!",
-        description: "A arma foi devolvida com sucesso.",
-      });
-    }
+  const handleOpenReturnDialog = (allocation: Allocation) => {
+    setSelectedAllocation({
+      id: allocation.id,
+      userId: allocation.user_id,
+      weaponId: allocation.weapon_id,
+      weaponModel: allocation.weapons.model,
+    });
+    setReturnDialogOpen(true);
   };
 
   const isOverdue = (allocatedAt: string) => {
@@ -217,7 +196,7 @@ export const AllocationsTable = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleReturn(allocation.id, allocation.user_id)}
+                          onClick={() => handleOpenReturnDialog(allocation)}
                           className="gap-2"
                         >
                           <CheckCircle className="w-4 h-4" />
@@ -232,6 +211,16 @@ export const AllocationsTable = () => {
           </Table>
         </div>
       </CardContent>
+      {selectedAllocation && (
+        <ReturnWeaponDialog
+          open={returnDialogOpen}
+          onOpenChange={setReturnDialogOpen}
+          allocationId={selectedAllocation.id}
+          userId={selectedAllocation.userId}
+          weaponId={selectedAllocation.weaponId}
+          weaponModel={selectedAllocation.weaponModel}
+        />
+      )}
     </Card>
   );
 };
